@@ -1,3 +1,6 @@
+import 'dart:developer' show log;
+
+import 'package:app3/constant/routes.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:app3/firebase_options.dart';
@@ -32,7 +35,7 @@ class _LoginViewState extends State<LoginView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Login'),
+        title: const Text('Login'),
       ),
       body: Column(
         children: [
@@ -53,15 +56,18 @@ class _LoginViewState extends State<LoginView> {
               onPressed: () async {
                 final email = _email.text;
                 final password = _password.text;
-                final userCredential = await FirebaseAuth.instance
-                    .signInWithEmailAndPassword(
-                        email: email, password: password);
+                await FirebaseAuth.instance.signInWithEmailAndPassword(
+                    email: email, password: password);
+                Navigator.of(context).pushNamedAndRemoveUntil(
+                  notesRoute,
+                  (route) => false,
+                );
               },
               child: const Text('Login')),
           TextButton(
               onPressed: () {
                 Navigator.of(context)
-                    .pushNamedAndRemoveUntil('/register/', (route) => false);
+                    .pushNamedAndRemoveUntil(registerRoute, (route) => false);
               },
               child: const Text('Not registered yet? Register here!'))
         ],
