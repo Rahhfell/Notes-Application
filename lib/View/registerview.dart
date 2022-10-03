@@ -1,5 +1,6 @@
 import 'dart:developer' show log;
 
+import 'package:app3/Utilities/show_error_dialogue.dart';
 import 'package:app3/constant/routes.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -54,10 +55,24 @@ class _RegisterViewState extends State<RegisterView> {
               onPressed: () async {
                 final email = _email.text;
                 final password = _password.text;
-                final userCredential = await FirebaseAuth.instance
-                    .createUserWithEmailAndPassword(
-                        email: email, password: password);
-                log(userCredential.toString());
+                try {
+                  await FirebaseAuth.instance.createUserWithEmailAndPassword(
+                      email: email, password: password);
+                  Navigator.of(context).pushNamed(verifyEmailRoute);
+                } on FirebaseAuthException catch (e) {
+                  if (e.code == 'weak-password') {
+                    await showErrorDialogue(context, 'Weak Password');
+                  } else if (e.code == 'email-already-in-use') {
+                    await showErrorDialogue(
+                        context, 'Email has already been used');
+                  } else if (e.code == 'invalid-email') {
+                    await showErrorDialogue(context, 'Email does not exist');
+                  } else {
+                    await showErrorDialogue(context, 'Error:${e.code}');
+                  }
+                } catch (e) {
+                  await showErrorDialogue(context, 'e.toString()');
+                }
               },
               child: const Text('Register')),
           TextButton(

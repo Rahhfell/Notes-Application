@@ -1,5 +1,6 @@
 import 'dart:developer' show log;
 
+import 'package:app3/Utilities/show_error_dialogue.dart';
 import 'package:app3/constant/routes.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -56,12 +57,30 @@ class _LoginViewState extends State<LoginView> {
               onPressed: () async {
                 final email = _email.text;
                 final password = _password.text;
-                await FirebaseAuth.instance.signInWithEmailAndPassword(
-                    email: email, password: password);
-                Navigator.of(context).pushNamedAndRemoveUntil(
-                  notesRoute,
-                  (route) => false,
-                );
+                try {
+                  await FirebaseAuth.instance.signInWithEmailAndPassword(
+                      email: email, password: password);
+                  final user = await FirebaseAuth.instance.currentUser;
+                  if (user?.emailVerified ?? false) {
+                    Navigator.of(context).pushNamedAndRemoveUntil(
+                      notesRoute,
+                      (route) => false,
+                    );
+                  } else {
+                    Navigator.of(context).pushNamedAndRemoveUntil(
+                        verifyEmailRoute, (route) => false);
+                  }
+                } on FirebaseAuthException catch (e) {
+                  if (e.code == 'user-not-found') {
+                    await showErrorDialogue(context, 'User not found');
+                  } else if (e.code == 'wrong-password') {
+                    await showErrorDialogue(context, 'Incorrect Password');
+                  } else {
+                    await showErrorDialogue(context, 'Error:${e.code}');
+                  }
+                } catch (e) {
+                  await showErrorDialogue(context, e.toString());
+                }
               },
               child: const Text('Login')),
           TextButton(

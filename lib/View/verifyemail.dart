@@ -37,14 +37,19 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
                 await user?.sendEmailVerification();
                 if (user != null) {
                   if (user.emailVerified) {
-                    print('okay');
-                    // ignore: use_build_context_synchronously
                     Navigator.of(context)
                         .pushNamedAndRemoveUntil(notesRoute, (route) => false);
                   }
                 }
               },
-              child: const Text('Send email verification'))
+              child: const Text('Send email verification')),
+          TextButton(
+              onPressed: () {
+                FirebaseAuth.instance.signOut();
+                Navigator.of(context)
+                    .pushNamedAndRemoveUntil(registerRoute, (route) => false);
+              },
+              child: const Text('Restart'))
         ],
       ),
     );
