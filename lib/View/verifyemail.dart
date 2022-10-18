@@ -1,9 +1,7 @@
 import 'package:app3/constant/routes.dart';
 import 'package:app3/main.dart';
+import 'package:app3/services/auth/auth_services.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:app3/firebase_options.dart';
-import 'package:firebase_core/firebase_core.dart';
 
 class VerifyEmailPage extends StatefulWidget {
   const VerifyEmailPage({Key? key}) : super(key: key);
@@ -33,23 +31,16 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
           ),
           TextButton(
               onPressed: () async {
-                final user = FirebaseAuth.instance.currentUser;
-                await user?.sendEmailVerification();
-                if (user != null) {
-                  if (user.emailVerified) {
-                    Navigator.of(context)
-                        .pushNamedAndRemoveUntil(notesRoute, (route) => false);
-                  }
-                }
+                await AuthServices.firebase().sendEmailVerification();
               },
               child: const Text('Send email verification')),
           TextButton(
               onPressed: () {
-                FirebaseAuth.instance.signOut();
+                AuthServices.firebase().logOut();
                 Navigator.of(context)
                     .pushNamedAndRemoveUntil(registerRoute, (route) => false);
               },
-              child: const Text('Restart'))
+              child: const Text('Restart')),
         ],
       ),
     );
