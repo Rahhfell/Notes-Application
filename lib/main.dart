@@ -1,22 +1,28 @@
+import 'package:app3/View/forgot_password_view.dart';
 import 'package:app3/View/loginview.dart';
+import 'package:app3/View/notes/create_update_note_view.dart';
 import 'package:app3/View/notes_view.dart';
 import 'package:app3/View/verifyemail.dart';
 import 'package:app3/constant/routes.dart';
-import 'package:app3/services/auth/auth_services.dart';
+import 'package:app3/helpers/loading/loading_screen.dart';
+import 'package:app3/services/auth/bloc/auth_bloc.dart';
+import 'package:app3/services/auth/bloc/auth_event.dart';
+import 'package:app3/services/auth/bloc/auth_state.dart';
+import 'package:app3/services/auth/firebase_auth_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:app3/View/registerview.dart';
-import 'dart:developer' show log;
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized;
   runApp(
     MaterialApp(
-      home: const HomePage(),
+      home: BlocProvider<AuthBloc>(
+        create: (context) => AuthBloc(FirebaseAuthProvider()),
+        child: const HomePage(),
+      ),
       routes: {
-        loginRoute: (context) => const LoginView(),
-        registerRoute: (context) => const RegisterView(),
-        notesRoute: (context) => const NotesView(),
-        verifyEmailRoute: (context) => const VerifyEmailPage()
+        createOrUpdateNoteRoute: (context) => const CreateUpdateNoteView(),
       },
     ),
   );
@@ -26,50 +32,32 @@ class HomePage extends StatelessWidget {
   const HomePage({Key? key}) : super(key: key);
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder(
-      future: AuthServices.firebase().initialize(),
-      builder: (context, snapshot) {
-        switch (snapshot.connectionState) {
-          case ConnectionState.done:
-            final user = AuthServices.firebase().currentUser;
-            if (user != null) {
-              if (user.isEmailVerified) {
-                return const NotesView();
-              } else {
-                return const VerifyEmailPage();
-              }
-            } else {
-              return const LoginView();
-            }
-          default:
-            return const Text('Loading');
+    context.read<AuthBloc>().add(const AuthEventInitialize());
+    return BlocConsumer<AuthBloc, AuthState>(
+      listener: (context, state) {
+        if (state.isLoading) {
+          LoadingScreen().show(
+              context: context,
+              text: state.loadingText ?? 'Please wait a moment');
+        } else {
+          LoadingScreen().hide();
+        }
+      },
+      builder: (context, state) {
+        if (state is AuthStateLoggedIn) {
+          return const NotesView();
+        } else if (state is AuthStateNeedsVerification) {
+          return const VerifyEmailPage();
+        } else if (state is AuthStateLoggedOut) {
+          return const LoginView();
+        } else if (state is AuthStateRegistering) {
+          return const RegisterView();
+        } else if (state is AuthStateForgotPassword) {
+          return const ForgotPasswordView();
+        } else {
+          return const Scaffold(body: CircularProgressIndicator());
         }
       },
     );
   }
-}
-
-Future<bool> showLogOutDialogue(BuildContext context) {
-  return showDialog<bool>(
-    context: context,
-    builder: (context) {
-      return AlertDialog(
-        title: const Text('Sign Out'),
-        content: const Text('Are you sure you want to sign out'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop(false);
-            },
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(true);
-              },
-              child: const Text('Yes')),
-        ],
-      );
-    },
-  ).then((value) => value ?? false);
 }

@@ -1,10 +1,12 @@
 import 'dart:developer' show log;
 
-import 'package:app3/Utilities/show_error_dialogue.dart';
-import 'package:app3/constant/routes.dart';
+import 'package:app3/Utilities/dialogs/error_dialog.dart';
 import 'package:app3/services/auth/auth_exceptions.dart';
-import 'package:app3/services/auth/auth_services.dart';
+import 'package:app3/services/auth/bloc/auth_bloc.dart';
+import 'package:app3/services/auth/bloc/auth_event.dart';
+import 'package:app3/services/auth/bloc/auth_state.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class LoginView extends StatefulWidget {
   const LoginView({Key? key}) : super(key: key);
@@ -33,67 +35,80 @@ class _LoginViewState extends State<LoginView> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Login'),
-      ),
-      body: Column(
-        children: [
-          TextField(
-              controller: _email,
-              enableSuggestions: false,
-              autocorrect: false,
-              keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(hintText: 'Enter email here')),
-          TextField(
-              controller: _password,
-              obscureText: true,
-              enableSuggestions: false,
-              autocorrect: false,
-              decoration:
-                  const InputDecoration(hintText: 'Enter password here')),
-          TextButton(
-              onPressed: () async {
-                final email = _email.text;
-                final password = _password.text;
-                try {
-                  await AuthServices.firebase()
-                      .logIn(email: email, password: password);
-                  final user = await AuthServices.firebase().currentUser;
-                  if (user?.isEmailVerified ?? false) {
-                    Navigator.of(context).pushNamedAndRemoveUntil(
-                      notesRoute,
-                      (route) => false,
-                    );
-                  } else {
-                    Navigator.of(context).pushNamedAndRemoveUntil(
-                        verifyEmailRoute, (route) => false);
-                  }
-                } on UserNotFoundAuthException {
-                  await showErrorDialogue(
-                    context,
-                    'User not found',
-                  );
-                } on WrongPasswordAuthException {
-                  await showErrorDialogue(
-                    context,
-                    'Incorrect Password',
-                  );
-                } on GenericAuthException {
-                  await showErrorDialogue(
-                    context,
-                    'Authentication Error',
-                  );
-                }
-              },
-              child: const Text('Login')),
-          TextButton(
-              onPressed: () {
-                Navigator.of(context)
-                    .pushNamedAndRemoveUntil(registerRoute, (route) => false);
-              },
-              child: const Text('Not registered yet? Register here!'))
-        ],
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, state) async {
+        if (state is AuthStateLoggedOut) {
+          if (state.exception is UserNotFoundAuthException) {
+            await showErrorDialog(context, 'User not Found');
+          } else if (state.exception is WrongPasswordAuthException) {
+            await showErrorDialog(context, 'Wrong Credentials');
+          } else if (state.exception is GenericAuthException) {
+            await showErrorDialog(context, 'Authentication Error');
+          }
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Login'),
+        ),
+        body: Padding(
+          padding: const EdgeInsets.all(.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                  controller: _email,
+                  enableSuggestions: false,
+                  autocorrect: false,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration:
+                      const InputDecoration(hintText: 'Enter email here')),
+              TextField(
+                  controller: _password,
+                  obscureText: true,
+                  enableSuggestions: false,
+                  autocorrect: false,
+                  decoration:
+                      const InputDecoration(hintText: 'Enter password here')),
+              Center(
+                child: Column(
+                  children: [
+                    TextButton(
+                      onPressed: () async {
+                        final email = _email.text;
+                        final password = _password.text;
+                        context
+                            .read<AuthBloc>()
+                            .add(AuthEventLogin(email, password));
+                      },
+                      child: const Text('Login'),
+                    ),
+                  ],
+                ),
+              ),
+              Center(
+                child: Column(
+                  children: [
+                    TextButton(
+                        onPressed: () {
+                          context
+                              .read<AuthBloc>()
+                              .add(const AuthEventForgotPassword());
+                        },
+                        child: const Text('I forgot my password')),
+                  ],
+                ),
+              ),
+              TextButton(
+                  onPressed: () {
+                    context
+                        .read<AuthBloc>()
+                        .add(const AuthEventShouldRegister());
+                  },
+                  child: const Text('Not registered yet? Register here!')),
+            ],
+          ),
+        ),
       ),
     );
   }

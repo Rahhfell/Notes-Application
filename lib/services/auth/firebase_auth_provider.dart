@@ -50,7 +50,8 @@ class FirebaseAuthProvider implements AuthProvider {
   Future<AuthUser> logIn(
       {required String email, required String password}) async {
     try {
-      FirebaseAuth.instance
+      await Future.delayed(const Duration(seconds: 3));
+      await FirebaseAuth.instance
           .signInWithEmailAndPassword(email: email, password: password);
       final user = currentUser;
       if (user != null) {
@@ -96,5 +97,21 @@ class FirebaseAuthProvider implements AuthProvider {
   Future<void> initialize() async {
     await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform);
+  }
+
+  @override
+  Future<void> sendPasswordReset({required String toEmail}) async {
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: toEmail);
+    } on FirebaseAuthException catch (e) {
+      switch (e.code) {
+        case 'firebase_auth/invalid-email':
+          throw InvalidEmailAuthException();
+        case 'firebase_auth/user-not-found':
+          throw UserNotFoundAuthException();
+        default:
+          throw GenericAuthException();
+      }
+    }
   }
 }
